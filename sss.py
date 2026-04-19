@@ -1,5 +1,9 @@
 import streamlit as st
 import os
+from streamlit_autorefresh import st_autorefresh
+
+# --- ƏN VACİB HİSSƏ: Avtomatik yenilənməni ən başa qoyuruq ---
+st_autorefresh(interval=1000, key="datarefresh") # 1 saniyədə bir yenilənir
 
 CHAT_FILE = "chat.txt"
 
@@ -12,7 +16,7 @@ if 'logged_in' not in st.session_state:
 
 # Giriş Ekranı
 if not st.session_state.logged_in:
-    user_select = st.selectbox("Adınızı seçin:", ["Umud", "Alis"])
+    user_select = st.selectbox("İstifadəçi seçin:", ["Umud", "Alis"])
     password = st.text_input("Gizli şifrə:", type="password")
     if st.button("Daxil ol"):
         if password == "umudalis":
@@ -22,28 +26,23 @@ if not st.session_state.logged_in:
         else:
             st.error("Şifrə yanlışdır!")
 else:
-    st.sidebar.write(f"Siz: **{st.session_state.username}**")
-    
-    # Yeniləmə düyməsi
-    if st.button("🔄 Söhbəti Yenilə"):
-        st.rerun()
+    # --- Çat Ekranı ---
+    # Mesajları oxumaq üçün funksiya
+    def get_messages():
+        if os.path.exists(CHAT_FILE):
+            with open(CHAT_FILE, "r", encoding="utf-8") as f:
+                return f.readlines()
+        return []
 
     # Mesajları göstərmə (WhatsApp stili)
-    if os.path.exists(CHAT_FILE):
-        with open(CHAT_FILE, "r", encoding="utf-8") as f:
-            messages = f.readlines()
-            for m in messages:
-                if ":" in m:
-                    sender, content = m.split(":", 1)
-                    sender = sender.strip()
-                    content = content.strip()
-
-                    # Məntiq: Əgər mesajı mən yazmışamsa, rolu 'user' (sağ) et
-                    # Yox, qarşı tərəf yazıbsa, rolu 'assistant' (sol) et
-                    role = "user" if sender == st.session_state.username else "assistant"
-                    
-                    with st.chat_message(role):
-                        st.write(f"**{sender}**: {content}")
+    messages = get_messages()
+    for m in messages:
+        if ":" in m:
+            sender, content = m.split(":", 1)
+            sender = sender.strip()
+            role = "user" if sender == st.session_state.username else "assistant"
+            with st.chat_message(role):
+                st.write(f"**{sender}**: {content.strip()}")
 
     # Yeni mesaj yazmaq
     if prompt := st.chat_input("Mesajını yaz..."):
