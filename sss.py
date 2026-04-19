@@ -2,6 +2,8 @@ import streamlit as st
 import os
 import json
 import uuid
+import shutil
+from datetime import datetime
 
 # Qovluqlar və fayl
 DATA_FILE = "chat.json"
@@ -14,10 +16,7 @@ if not os.path.exists(MEDIA_DIR):
 def load_data():
     if not os.path.exists(DATA_FILE): return []
     with open(DATA_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
-            return []
+        return json.load(f)
 
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -29,31 +28,27 @@ st.title("💬 Gizli Çat v2.0")
 # Sessiya idarəsi
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
-    st.session_state.user = ""
-    st.session_state.hidden_msgs = [] 
+    st.session_state.hidden_msgs = [] # Özü üçün sildiyi mesajlar
 
-# --- GİRİŞ (Şifrə ilə bərpa olundu) ---
+# --- GİRİŞ ---
 if not st.session_state.logged_in:
     name = st.selectbox("Adınız:", ["Umud", "Alis"])
-    password = st.text_input("Gizli şifrəni daxil et:", type="password")
     if st.button("Daxil ol"):
-        if password == "umudalis": # Şifrə yoxlaması
-            st.session_state.logged_in = True
-            st.session_state.user = name
-            st.rerun()
-        else:
-            st.error("Şifrə yanlışdır!")
+        st.session_state.logged_in = True
+        st.session_state.user = name
+        st.rerun()
 else:
     # --- SİLİNMƏ MƏNTİQİ ---
     messages = load_data()
     
-    # Söhbəti tam silmə
+    # 1. Çatı hamı üçün təmizlə
     if st.sidebar.button("🗑 Söhbəti tam sil (Hər kəs üçün)"):
-        save_data([])
+        save_data([]) # Faylı boşalt
         st.rerun()
 
     # --- MESAJLARIN GÖSTƏRİLMƏSİ ---
     for msg in messages:
+        # Əgər mesaj "mənə" görə gizlədilibsə, göstərmə
         if msg['id'] in st.session_state.hidden_msgs:
             continue
 
@@ -61,8 +56,8 @@ else:
         with st.chat_message(role):
             st.write(f"**{msg['sender']}**: {msg['text']}")
             
-            # Media göstərmə
-            if msg['media_path'] and os.path.exists(msg['media_path']):
+            # Media varsa göstər
+            if msg['media_path']:
                 if msg['type'] == 'image': st.image(msg['media_path'])
                 elif msg['type'] == 'video': st.video(msg['media_path'])
                 elif msg['type'] == 'audio': st.audio(msg['media_path'])
@@ -79,7 +74,7 @@ else:
 
     # --- MESAJ GÖNDƏRMƏ ---
     prompt = st.chat_input("Mesaj və ya fayl...")
-    uploaded_file = st.file_uploader("Fayl seç", type=['png', 'jpg', 'mp4', 'mp3'])
+    uploaded_file = st.file_uploader("Fayl seç (Şəkil, Video, Səs)", type=['png', 'jpg', 'mp4', 'mp3'])
 
     if prompt or uploaded_file:
         media_path = None
