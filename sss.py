@@ -1,11 +1,15 @@
 import streamlit as st
 import os
+from streamlit_autorefresh import st_autorefresh
 
 CHAT_FILE = "chat.txt"
 
 # Səhifə konfiqurasiyası
 st.set_page_config(page_title="Bizim Çat", page_icon="💬")
 st.title("💬 Gizli Çat")
+
+# Avtomatik yenilənmə (hər 2000 millisaniyədə = 2 saniyə)
+st_autorefresh(interval=2000, key="datarefresh")
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -23,31 +27,24 @@ if not st.session_state.logged_in:
         else:
             st.error("Şifrə yanlışdır!")
 else:
-    # Çat Ekranı (WhatsApp Stili)
-    st.sidebar.write(f"Salam, **{st.session_state.username}**!")
-    if st.sidebar.button("Çıxış"):
-        st.session_state.logged_in = False
-        st.rerun()
-
-    # Mesajları oxumaq üçün funksiya
-    def load_messages():
-        if os.path.exists(CHAT_FILE):
-            with open(CHAT_FILE, "r", encoding="utf-8") as f:
-                return f.readlines()
-        return []
-
     # Mesajları göstərmə (WhatsApp stili)
-    messages = load_messages()
-    for m in messages:
-        if ":" in m:
-            sender, content = m.split(":", 1)
-            # Umud üçün "user", Alis üçün "assistant" kimi göstəririk ki, fərqli tərəflərdə görünsün
-            avatar = "👤" if sender.strip() == "Umud" else "👩‍🦰"
-            with st.chat_message(sender.strip(), avatar=avatar):
-                st.write(content.strip())
+    if os.path.exists(CHAT_FILE):
+        with open(CHAT_FILE, "r", encoding="utf-8") as f:
+            messages = f.readlines()
+            for m in messages:
+                if ":" in m:
+                    sender, content = m.split(":", 1)
+                    avatar = "👤" if sender.strip() == "Umud" else "👩‍🦰"
+                    with st.chat_message(sender.strip(), avatar=avatar):
+                        st.write(content.strip())
 
     # Yeni mesaj yazmaq
     if prompt := st.chat_input("Mesajını yaz..."):
         with open(CHAT_FILE, "a", encoding="utf-8") as f:
             f.write(f"{st.session_state.username}: {prompt}\n")
+        st.rerun()
+
+    # Sidebar-da çıxış düyməsi
+    if st.sidebar.button("Çıxış"):
+        st.session_state.logged_in = False
         st.rerun()
