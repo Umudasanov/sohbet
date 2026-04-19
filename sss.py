@@ -34,7 +34,7 @@ if not st.session_state.logged_in:
     name = st.selectbox("Adınız:", ["Umud", "Alis"])
     password = st.text_input("Şifrə:", type="password")
     if st.button("Daxil ol"):
-        if password == "feride_umud_2026":
+        if password == "umudalis":
             st.session_state.logged_in = True
             st.session_state.user = name
             st.rerun()
