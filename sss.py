@@ -3,6 +3,11 @@ import os
 import json
 import uuid
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
+
+# --- REAL-TIME AYARI ---
+# Hər 1 saniyədə səhifəni avtomatik yeniləyir
+st_autorefresh(interval=1000, key="datarefresh")
 
 # Fayllar
 DATA_FILE = "chat.json"
@@ -21,16 +26,17 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
-st.set_page_config(page_title="WhatsApp Web Copy", page_icon="💬")
+st.set_page_config(page_title="Bizim Çat", page_icon="💬")
+st.title("💬 Gizli Çat v2.0")
 
-# --- GİRİŞ ---
+# --- SESSİYA İDARƏSİ ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user = ""
     st.session_state.hidden_msgs = [] 
 
+# --- GİRİŞ ---
 if not st.session_state.logged_in:
-    st.title("🔐 Giriş")
     name = st.selectbox("Adınız:", ["Umud", "Alis"])
     password = st.text_input("Şifrə:", type="password")
     if st.button("Daxil ol"):
@@ -40,37 +46,30 @@ if not st.session_state.logged_in:
             st.rerun()
         else: st.error("Şifrə yanlışdır!")
 else:
-    st.title(f"💬 {st.session_state.user} - Chat")
-    
-    messages = load_data()
-
     # --- SİLİNMƏ ---
     if st.sidebar.button("🗑 Söhbəti təmizlə"):
         save_data([])
         st.rerun()
 
-    # --- MESAJLARIN GÖSTƏRİLMƏSİ (WhatsApp Stili) ---
+    messages = load_data()
+
+    # --- MESAJLARIN GÖSTƏRİLMƏSİ ---
     for msg in messages:
         if msg['id'] in st.session_state.hidden_msgs: continue
 
         role = "user" if msg['sender'] == st.session_state.user else "assistant"
         
-        # Mesajı WhatsApp kimi göstər
         with st.chat_message(role):
             st.write(f"**{msg['sender']}**: {msg['text']}")
             
-            # Media
             if msg['media_path'] and os.path.exists(msg['media_path']):
                 if msg['type'] == 'image': st.image(msg['media_path'])
                 elif msg['type'] == 'video': st.video(msg['media_path'])
                 elif msg['type'] == 'audio': st.audio(msg['media_path'])
 
-            # Vaxt və Status
-            st.caption(f"{msg['time']}  ✅") # '✅' - WhatsApp statusu kimi
+            st.caption(f"{msg['time']}  ✅")
 
-            # Silmə düymələri
-            col1, col2 = st.columns([1, 4])
-            if col1.button("Sil", key=f"del_{msg['id']}", help="Bu mesajı hamı üçün sil"):
+            if st.button("Sil", key=f"del_{msg['id']}"):
                 messages = [m for m in messages if m['id'] != msg['id']]
                 save_data(messages)
                 st.rerun()
@@ -96,7 +95,7 @@ else:
             "text": prompt or "",
             "media_path": media_path,
             "type": media_type,
-            "time": datetime.now().strftime("%H:%M") # Saat və dəqiqə
+            "time": datetime.now().strftime("%H:%M")
         }
         messages.append(new_msg)
         save_data(messages)
